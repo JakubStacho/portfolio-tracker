@@ -125,8 +125,8 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 10/18/2021	Cash	Other	Wealthsimple	Deposit	1	CAD	$500.00	CAD	$500.00
 10/21/2021	DWAC	Stock	Questrade	Buy	3	USD	$27.00	USD	$85.95
 10/22/2021	DWAC	Stock	Questrade	Sell	-3	USD	$90.00	USD	$265.04
-10/22/2021	PHUNW	Stock	Questrade	Buy	8	USD	$9.50	USD	$81.45
-10/25/2021	PHUNW	Stock	Questrade	Sell	-8	USD	$6.00	USD	$42.54
+10/22/2021	DWAC	Stock	Questrade	Buy	8	USD	$9.50	USD	$81.45
+10/25/2021	DWAC	Stock	Questrade	Sell	-8	USD	$6.00	USD	$42.54
 10/25/2021	TSE:VDY	ETF	Questrade	Sell	-12	CAD	$42.50	CAD	$505.01
 10/26/2021	QYLD	ETF	Wealthsimple	Dividend	0	CAD	$12.22	CAD	$10.39
 10/26/2021	Cash	Other	Wealthsimple	Deposit	1	CAD	$500.00	CAD	$500.00
@@ -142,7 +142,7 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 11/11/2021	TSE:ZWC	ETF	Questrade	Sell	-26	CAD	$19.00	CAD	$488.96
 11/12/2021	AAPL	Stock	Questrade	Dividend	0	USD	$0.94	USD	$0.94
 11/16/2021	BTI	Stock	Wealthsimple	Dividend	0	CAD	$13.54	CAD	$13.54
-11/17/2021	TSE:HDI	Stock	Wealthsimple	Buy	2	CAD	$43.00	CAD	$86.00
+11/17/2021	HDIUF	Stock	Wealthsimple	Buy	2	CAD	$43.00	CAD	$86.00
 11/18/2021	V	Stock	Questrade	Buy	3	USD	$204.75	USD	$619.20
 11/22/2021	TSE:VFV	ETF	Wealthsimple	Buy	1	CAD	$106.00	CAD	$106.00
 11/22/2021	V	Stock	Questrade	Buy	2	USD	$194.78	USD	$394.51
@@ -154,7 +154,7 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 12/01/2021	QYLD	ETF	Wealthsimple	Dividend	0	CAD	$14.44	CAD	$12.27
 12/01/2021	TSE:CU	Stock	Wealthsimple	Dividend	0	CAD	$4.40	CAD	$4.40
 12/03/2021	Cash	Other	Wealthsimple	Deposit	1	CAD	$500.00	CAD	$500.00
-12/06/2021	TSE:HDI	Stock	Wealthsimple	Sell	-2	CAD	$43.00	CAD	$86.22
+12/06/2021	HDIUF	Stock	Wealthsimple	Sell	-2	CAD	$43.00	CAD	$86.22
 12/07/2021	V	Stock	Questrade	Dividend	0	USD	$0.33	USD	$0.33
 12/08/2021	JEPI	ETF	Wealthsimple	Dividend	0	CAD	$9.71	CAD	$8.25
 12/09/2021	MSFT	Stock	Wealthsimple	Dividend	0	CAD	$2.37	CAD	$2.01
@@ -211,7 +211,7 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 02/04/2022	SCHD	ETF	Questrade	Buy	10	USD	$78.42	USD	$784.20
 02/07/2022	TSE:VFV	ETF	Wealthsimple	Buy	1	CAD	$101.56	CAD	$101.56
 02/07/2022	TSE:VFV	ETF	Wealthsimple	Buy	1	CAD	$101.04	CAD	$101.04
-02/07/2022	FB	Stock	Questrade	Buy	3	USD	$225.50	USD	$681.45
+02/07/2022	META	Stock	Questrade	Buy	3	USD	$225.50	USD	$681.45
 02/08/2022	JEPI	ETF	Wealthsimple	Dividend	0	CAD	$9.73	CAD	$8.27
 02/10/2022	AAPL	Stock	Questrade	Dividend	0	USD	$0.94	USD	$0.94
 02/11/2022	TSE:VFV	ETF	Wealthsimple	Buy	1	CAD	$101.08	CAD	$101.08
@@ -246,7 +246,7 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 03/31/2022	QQQM	ETF	Questrade	Dividend	0	USD	$1.82	USD	$1.82
 03/31/2022	SCI	Stock	Questrade	Dividend	0	USD	$0.94	USD	$0.94
 04/01/2022	TSE:VFV	ETF	Wealthsimple	Dividend	0	CAD	$12.47	CAD	$12.47
-04/05/2022	Cash	Other	Wealthsimple	Withdrawl	-1	CAD	$614.39	CAD	$614.39
+04/05/2022	Cash	Other	Wealthsimple	Withdraw	-1	CAD	$614.39	CAD	$614.39
 04/06/2022	Cash	Other	Questrade	Deposit	1	CAD	$5,000.00	CAD	$5,000.00
 04/07/2022	TSE:ATD	Stock	Wealthsimple	Dividend	0	CAD	$2.20	CAD	$2.20
 04/08/2022	Cash	Other	Questrade	FX Sell	-1	CAD	$5,000.00	CAD	$5,000.00

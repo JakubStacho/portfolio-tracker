@@ -56,7 +56,7 @@ class Stock:
         self.units          = units
         self.close_prices   = None
         self.name           = None
-        self.dividends      = [] # Maybe this isn't good to store in the Stock class? Cuz it's like a growing list...
+        #self.dividends      = [] # Maybe this isn't good to store in the Stock class? Cuz it's like a growing list...
 
         if ticker[-3:] == '.TO':
             self.currency   = 'CAD'
@@ -68,6 +68,10 @@ class Stock:
         return self.ticker
     
 
+    def __repr__(self):
+        return repr(str(self.units) + ' units of ' + self.ticker)
+    
+
     def PullName(self) -> None:
         ''' Pulling the full company name takes a long time but we can add
             the option to do that here because why not '''
@@ -76,27 +80,37 @@ class Stock:
 
     def PullData(self, start_date, end_date) -> None:
         ''' Pulls the adjusted close price data for this stock '''
-        self.close_prices = pdr.get_data_yahoo(self.ticker, start_date, end_date, progress=False).iloc[:, [4]]
+        start_date -=  dt.timedelta(days=7) # Pull extra days in case of market closure
+        #print('Pulling data for ' + self.ticker + ' between ' + str(start_date) + ' and ' + str(end_date))
+        self.close_prices = pdr.get_data_yahoo(self.ticker, start_date, end_date, progress=False).iloc[:, 3]
     
 
     def Buy(self, unit_number) -> None:
         ''' Adds held shares '''
+        #print('Buying ' + str(unit_number) + ' units of ' + self.ticker)
         self.units += unit_number
     
 
     def Sell(self, unit_number) -> None:
         ''' Removes held shares '''
-        self.units -= unit_number
+        #print('Selling ' + str(unit_number) + ' units of ' + self.ticker)
+        self.units += unit_number
+        # Should change the recording method and then update this to a -=. I temporarily set it to += now because selling is
+        # in my dataset with negative units already.
     
 
-    def RecordDividend(self, date, amount) -> None:
-        ''' Records a dividend to the dividend history for this stock '''
-        self.dividends.append([date, amount])
+    ''' This doesn't work for when you get a dividend after you have shold all your shares and the stock is no longer in the list '''
+    #def RecordDividend(self, date, amount) -> None:
+    #    ''' Records a dividend to the dividend history for this stock '''
+    #    self.dividends.append([date, amount])
 
 
     def Value(self, date=dt.datetime.now()):
-        ''' Returns the value of this position at a given date '''      
-        return self.units * self.close_prices['Adj Close'][date]
+        ''' Returns the value of this position at a given date '''
+        #print('Calculating value of ' + self.ticker + ' on the date: ' + str(date))
+        while date not in self.close_prices.keys():
+            date -= dt.timedelta(days=1)
+        return self.units * self.close_prices[date]
 
 
 
@@ -114,6 +128,10 @@ class Transaction:
         self.pps        = price_per_share
         self.currency   = total_currency
         self.amount     = total_amount
+    
+
+    def __repr__(self):
+        return repr(self.ticker + ' ' + self.type + ' transaction on ' + str(self.date))
 
 
 
@@ -132,8 +150,16 @@ class TransactionReader:
         self.total_currencies   = transaction_data[:,8]
         self.total_amounts      = np.array([float(total.replace(',','')[1:]) for total in transaction_data[:,9]])
 
+        # Shift any dates on weekends to the first weekday after the weekend
+        for i, date in enumerate(self.dates):
+            new_date = date
+            while new_date.weekday() > 4:
+                new_date += dt.timedelta(days=1)
+            self.dates[i] = new_date
+
         del transaction_data
 
+        #print(self.dates)
         #print(self.dates[0])
         #print(self.tickers[0])
         #print(self.actions[0])
@@ -142,11 +168,12 @@ class TransactionReader:
         #print(self.total_currencies[0])
         #print(self.total_amounts[0])
     
+
     def GenerateTransactionList(self):
         ''' Method for generating a dictionary of Transaction objects from the data that was read in '''
-        transactions = dict.fromkeys(self.dates, [])
-        for i in np.arange(len(self.dates)):
-            transactions[self.dates[i]].append(Transaction(self.dates[i], self.tickers[i], self.actions[i], self.units[i], self.price_per_shares[i], self.total_currencies[i], self.total_amounts[i]))
+        transactions = {date: [] for date in self.dates}
+        for i, date in enumerate(self.dates):
+            transactions[date].append(Transaction(date, self.tickers[i], self.actions[i], self.units[i], self.price_per_shares[i], self.total_currencies[i], self.total_amounts[i]))
         
         return transactions
 
@@ -162,9 +189,11 @@ class Portfolio:
         self.cash           = {'CAD': initial_cash_CAD,
                                 'USD': initial_cash_USD}
         
-        self.value_history  = None
-        self.return_history = None
-        self.dates          = None
+        self.value_history   = None
+        self.daily_deposit   = 0
+        self.deposit_history = None
+        self.return_history  = None
+        self.dates           = None
 
         # Initialize any stocks in the portfolio.
         # These should be passed as a numpy array with
@@ -175,7 +204,7 @@ class Portfolio:
                 units = initial_tickers_and_units[i, 1]
                 self.AddStock(ticker, units)
         
-        self.exchange_rates = pdr.get_data_yahoo('USDCAD=X', dt.datetime(2020,1,1), dt.datetime.now(), progress=False).iloc[:, [4]]
+        self.exchange_rates = pdr.get_data_yahoo('USDCAD=X', dt.datetime(2020,1,1), dt.datetime.now(), progress=False).iloc[:, 4]
     
 
     # ------------------------------------------------------------------------
@@ -228,11 +257,13 @@ class Portfolio:
     def Deposit(self, transaction) -> None:
         ''' Adds cash to the portfolio from a cash deposit '''
         self.cash[transaction.currency] += transaction.amount
+        self.daily_deposit += transaction.amount
     
 
     def Withdraw(self, transaction) -> None:
         ''' Removes cash from the portfolio from a cash withdrawl '''
         self.cash[transaction.currency] -= transaction.amount
+        self.daily_deposit -= transaction.amount
     
 
     def FXBuy(self, transaction) -> None:
@@ -280,9 +311,9 @@ class Portfolio:
 
     def Dividend(self, transaction) -> None:
         ''' Adds cash from a dividend to the portfolio '''
-        stock = self.GetStock(transaction.ticker)
+        #stock = self.GetStock(transaction.ticker)
         self.cash[transaction.currency] += transaction.amount
-        stock.RecordDividend(transaction.amount, transaction.date)
+        #stock.RecordDividend(transaction.amount, transaction.date) # I'll have to think about this later
     
 
     def Rebate(self, transaction) -> None:
@@ -297,7 +328,7 @@ class Portfolio:
 
     def CalculateValue(self, date=dt.datetime.now()):
         ''' Calculates the value of the portfolio (in CAD) on a given date at market close '''
-        exchange_rate = self.exchange_rates['Adj Close'][date]
+        exchange_rate = self.exchange_rates[date]
         value = self.cash['CAD'] + (self.cash['USD'] * exchange_rate)
 
         for stock in self.stock_list:
@@ -312,13 +343,19 @@ class Portfolio:
     def TrackValue(self, start_date, end_date) -> None:
         ''' Calculate the value of the portfolio on each day in the given time span '''
         self.dates = GetWeekdays(start_date, end_date)
+        self.value_history = []
+        self.deposit_history = []
+
         for stock in self.stock_list:
             stock.PullData(start_date, end_date)
 
         reader = TransactionReader(self.transaction_file)
         transactions = reader.GenerateTransactionList()
 
+        #print('Starting transaction processing')
         for date in self.dates:
+            #print('Processing portfolio value on date: ' + str(date))
+            self.daily_deposit = 0
             daily_transactions = []
             try:
                 daily_transactions = transactions[date]
@@ -326,16 +363,17 @@ class Portfolio:
                 pass
 
             for transaction in daily_transactions:
+                #print('Processing ' + transaction.type + ' transaction on ' + transaction.ticker)
                 self.ProcessTransaction(transaction)
             
             portfolio_value = self.CalculateValue(date)
 
-            self.dates.append(date)
-            self.value_history(portfolio_value)
+            #self.dates.append(date) Already do this above at the start with GetWeekdays
+            self.value_history.append(portfolio_value)
+            self.deposit_history.append(self.daily_deposit)
         
-        # for day in dates look through actions and apply changes
-        #   calculate value at close
-        #   append to value list
+        self.value_history = np.array(self.value_history)
+        self.deposit_history = np.array(self.deposit_history)
 
     
     def TrackReturns(self, start_date, end_date) -> None:
