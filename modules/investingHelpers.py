@@ -16,12 +16,12 @@ yf.pdr_override()
 
 
 
-def HoldingPeriodReturn(start_value, end_value) -> float:
+def HoldingPeriodReturn(start_value: float, end_value: float) -> float:
     ''' Calculate percentage investment return given two values '''
     if start_value == 0:
-        raise Exception('Error: Cannot use 0 as the initial value of an investment.')
-    
-    return (end_value / start_value) - 1
+        return 0
+    else:
+        return (end_value / start_value) - 1
 
 
 def GetWeekdays(start_date, end_date):
@@ -189,11 +189,12 @@ class Portfolio:
         self.cash           = {'CAD': initial_cash_CAD,
                                 'USD': initial_cash_USD}
         
-        self.value_history   = None
-        self.daily_deposit   = 0
-        self.deposit_history = None
-        self.return_history  = None
-        self.dates           = None
+        self.daily_deposit    = 0
+        self.deposit_history  = None
+        self.value_history    = None
+        self.dividend_history = None
+        self.return_history   = None
+        self.dates            = None
 
         # Initialize any stocks in the portfolio.
         # These should be passed as a numpy array with
@@ -248,39 +249,39 @@ class Portfolio:
     # ------------------------------------------------------------------------
     
 
-    def ProcessTransaction(self, transaction) -> None:
+    def ProcessTransaction(self, transaction, i) -> None:
         ''' Reads in a Transaction and applies it to the portfolio '''
         managing_function = getattr(self, transaction.type)
-        managing_function(transaction)
+        managing_function(transaction, i)
 
 
-    def Deposit(self, transaction) -> None:
+    def Deposit(self, transaction, i) -> None:
         ''' Adds cash to the portfolio from a cash deposit '''
         self.cash[transaction.currency] += transaction.amount
         self.daily_deposit += transaction.amount
     
 
-    def Withdraw(self, transaction) -> None:
+    def Withdraw(self, transaction, i) -> None:
         ''' Removes cash from the portfolio from a cash withdrawl '''
         self.cash[transaction.currency] -= transaction.amount
         self.daily_deposit -= transaction.amount
     
 
-    def FXBuy(self, transaction) -> None:
+    def FXBuy(self, transaction, i) -> None:
         ''' Processes the buy portion of a currency exchange '''
         self.cash[transaction.currency] += transaction.amount
 
         # There are also fees associated with this. Would probably have to pass date and check exchange rate...
     
 
-    def FXSell(self, transaction) -> None:
+    def FXSell(self, transaction, i) -> None:
         ''' Processes the sell portion of a currency exchange '''
         self.cash[transaction.currency] -= transaction.amount
 
         # There are also fees associated with this. Would probably have to pass date and check exchange rate...
     
 
-    def Buy(self, transaction) -> None:
+    def Buy(self, transaction, i) -> None:
         ''' Performs a buy action updating cash and the stock '''
         new_stock = False
         if not self.StockOwned(transaction.ticker):
@@ -296,7 +297,7 @@ class Portfolio:
         #fee = transaction.amount - (transaction.units * transaction.pps) # Not sure how to make use of this yet lol
     
 
-    def Sell(self, transaction) -> None:
+    def Sell(self, transaction, i) -> None:
         ''' Performs a sell action updating cash and the stock '''
         stock = self.GetStock(transaction.ticker)
         self.cash[transaction.currency] += transaction.amount
@@ -309,14 +310,19 @@ class Portfolio:
             del stock
     
 
-    def Dividend(self, transaction) -> None:
+    def Dividend(self, transaction, i) -> None:
         ''' Adds cash from a dividend to the portfolio '''
-        #stock = self.GetStock(transaction.ticker)
         self.cash[transaction.currency] += transaction.amount
+        if transaction.currency == 'USD':
+            exchange_rate = self.exchange_rates[transaction.date]
+        else:
+            exchange_rate = 1
+        self.dividend_history[i] += exchange_rate * transaction.amount
+        #stock = self.GetStock(transaction.ticker)
         #stock.RecordDividend(transaction.amount, transaction.date) # I'll have to think about this later
     
 
-    def Rebate(self, transaction) -> None:
+    def Rebate(self, transaction, i) -> None:
         ''' Add cash to portfolio from a rebate '''
         self.cash[transaction.currency] += transaction.amount
 
@@ -342,9 +348,13 @@ class Portfolio:
 
     def TrackValue(self, start_date, end_date) -> None:
         ''' Calculate the value of the portfolio on each day in the given time span '''
-        self.dates = GetWeekdays(start_date, end_date)
-        self.value_history = []
-        self.deposit_history = []
+        self.dates            = GetWeekdays(start_date, end_date)
+        days_in_range         = len(self.dates)
+
+        self.value_history    = np.zeros(days_in_range)
+        self.deposit_history  = np.zeros(days_in_range)
+        self.dividend_history = np.zeros(days_in_range)
+        self.return_history   = np.zeros(days_in_range)
 
         for stock in self.stock_list:
             stock.PullData(start_date, end_date)
@@ -353,7 +363,7 @@ class Portfolio:
         transactions = reader.GenerateTransactionList()
 
         #print('Starting transaction processing')
-        for date in self.dates:
+        for i, date in enumerate(self.dates):
             #print('Processing portfolio value on date: ' + str(date))
             self.daily_deposit = 0
             daily_transactions = []
@@ -364,16 +374,19 @@ class Portfolio:
 
             for transaction in daily_transactions:
                 #print('Processing ' + transaction.type + ' transaction on ' + transaction.ticker)
-                self.ProcessTransaction(transaction)
+                self.ProcessTransaction(transaction, i)
             
             portfolio_value = self.CalculateValue(date)
 
-            #self.dates.append(date) Already do this above at the start with GetWeekdays
-            self.value_history.append(portfolio_value)
-            self.deposit_history.append(self.daily_deposit)
-        
-        self.value_history = np.array(self.value_history)
-        self.deposit_history = np.array(self.deposit_history)
+            self.value_history[i]   = portfolio_value
+            self.deposit_history[i] = self.daily_deposit
+
+            # Calculate daily return based on the last known portfolio value
+            if i == 0:
+                last_value_plus_deposits = 0
+            else:
+                last_value_plus_deposits = self.value_history[i-1] + self.daily_deposit
+            self.return_history[i]  = HoldingPeriodReturn(last_value_plus_deposits, portfolio_value)
 
     
     def TrackReturns(self, start_date, end_date) -> None:
