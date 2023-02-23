@@ -125,8 +125,8 @@ Date	Security	Type	Broker	Action	Quantity	Currency	Price	Currency	Total
 10/18/2021	Cash	Other	Wealthsimple	Deposit	1	CAD	$500.00	CAD	$500.00
 10/21/2021	DWAC	Stock	Questrade	Buy	3	USD	$27.00	USD	$85.95
 10/22/2021	DWAC	Stock	Questrade	Sell	-3	USD	$90.00	USD	$265.04
-10/22/2021	DWAC	Stock	Questrade	Buy	8	USD	$9.50	USD	$81.45
-10/25/2021	DWAC	Stock	Questrade	Sell	-8	USD	$6.00	USD	$42.54
+10/22/2021	PHUNW	Stock	Questrade	Buy	8	USD	$9.50	USD	$81.45
+10/25/2021	PHUNW	Stock	Questrade	Sell	-8	USD	$6.00	USD	$42.54
 10/25/2021	TSE:VDY	ETF	Questrade	Sell	-12	CAD	$42.50	CAD	$505.01
 10/26/2021	QYLD	ETF	Wealthsimple	Dividend	0	CAD	$12.22	CAD	$10.39
 10/26/2021	Cash	Other	Wealthsimple	Deposit	1	CAD	$500.00	CAD	$500.00

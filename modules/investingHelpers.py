@@ -62,6 +62,10 @@ class Stock:
             self.currency   = 'CAD'
         else:
             self.currency   = 'USD'
+            # This one changed from canadian listed to US listed so I have to revert to CAD
+            # Actually, that's ok because the transaction is still in CAD and value in USD can be exchanged
+            #if self.ticker == 'HDIUF':
+            #    self.currency = 'CAD'
     
 
     def __str__(self) -> str:
@@ -82,7 +86,11 @@ class Stock:
         ''' Pulls the adjusted close price data for this stock '''
         start_date -=  dt.timedelta(days=7) # Pull extra days in case of market closure
         #print('Pulling data for ' + self.ticker + ' between ' + str(start_date) + ' and ' + str(end_date))
-        self.close_prices = pdr.get_data_yahoo(self.ticker, start_date, end_date, progress=False).iloc[:, 3]
+        # Basically ignore this stock. Will set value to 0 so it doesn't matter what I pull
+        if self.ticker == 'PHUNW':
+            self.close_prices = pdr.get_data_yahoo('MSFT', start_date, end_date, progress=False).iloc[:, 3]
+        else:
+            self.close_prices = pdr.get_data_yahoo(self.ticker, start_date, end_date, progress=False).iloc[:, 3]
     
 
     def Buy(self, unit_number) -> None:
@@ -110,7 +118,10 @@ class Stock:
         #print('Calculating value of ' + self.ticker + ' on the date: ' + str(date))
         while date not in self.close_prices.keys():
             date -= dt.timedelta(days=1)
-        return self.units * self.close_prices[date]
+        if self.ticker == 'PHUNW':
+            return 0
+        else:
+            return self.units * self.close_prices[date]
 
 
 
@@ -356,6 +367,8 @@ class Portfolio:
         self.dividend_history = np.zeros(days_in_range)
         self.return_history   = np.zeros(days_in_range)
 
+        self.cumulative_deposits = None
+
         for stock in self.stock_list:
             stock.PullData(start_date, end_date)
 
@@ -387,6 +400,8 @@ class Portfolio:
             else:
                 last_value_plus_deposits = self.value_history[i-1] + self.daily_deposit
             self.return_history[i]  = HoldingPeriodReturn(last_value_plus_deposits, portfolio_value)
+        
+        self.cumulative_deposits = np.cumsum(self.deposit_history)
 
     
     def TrackReturns(self, start_date, end_date) -> None:
