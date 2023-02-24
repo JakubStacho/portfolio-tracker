@@ -127,7 +127,7 @@ class Stock:
     
 
     def CalculateReturns(self) -> None:
-        ''' Calculates the percentage return history over a given time period '''
+        ''' Calculates the percentage return history over the range of pulled data '''
         simple_returns = self.close_prices.pct_change().dropna()
         percent_returns = (np.cumprod([(1 + rt) for rt in simple_returns]) - 1) * 100
         self.return_history = np.concatenate((np.array([0]), percent_returns), axis=0)
@@ -178,15 +178,6 @@ class TransactionReader:
             self.dates[i] = new_date
 
         del transaction_data
-
-        #print(self.dates)
-        #print(self.dates[0])
-        #print(self.tickers[0])
-        #print(self.actions[0])
-        #print(self.units[0])
-        #print(self.price_per_shares[0])
-        #print(self.total_currencies[0])
-        #print(self.total_amounts[0])
     
 
     def GenerateTransactionList(self):
@@ -367,6 +358,31 @@ class Portfolio:
         return value
 
 
+    def TimeWeightedReturn(self, start_date, end_date):
+        ''' Returns the time weighted rate of return series in a specified date range '''
+        if start_date < self.dates[0]:
+            print(start_date)
+            print(self.dates[0])
+            raise Exception('Error: Start date spcified lies outside of your portfolio tracking range.')
+        if end_date > self.dates[-1]:
+            print(end_date)
+            print(self.dates[-1])
+            raise Exception('Error: End date spcified lies outside of your portfolio tracking range.')
+        
+        while start_date not in self.dates:
+            start_date += dt.timedelta(days=1)
+        while end_date not in self.dates:
+            end_date -= dt.timedelta(days=1)
+        
+        start_index = np.where(self.dates == start_date)[0][0]
+        end_index   = np.where(self.dates == end_date)[0][0]
+
+        future_value = self.value_history[start_index:end_index+1]
+        present_value_with_all_cashflows = (self.value_history[start_index] - self.cumulative_deposits[start_index]
+                                            + self.cumulative_deposits[start_index:end_index+1])
+        return 100 * ((future_value / present_value_with_all_cashflows) - 1)
+
+
     def TrackValue(self, start_date, end_date) -> None:
         ''' Calculate the value of the portfolio on each day in the given time span '''
         self.dates            = GetWeekdays(start_date, end_date)
@@ -415,8 +431,9 @@ class Portfolio:
         # more useful portfolio properties
         self.cumulative_deposits = np.cumsum(self.deposit_history)
 
-        value_minus_deposits = self.value_history - self.cumulative_deposits
-        self.time_weighted_ror = 100 * value_minus_deposits / self.cumulative_deposits
+        #value_minus_deposits = self.value_history - self.cumulative_deposits
+        #self.time_weighted_ror = 100 * value_minus_deposits / self.cumulative_deposits
+        self.time_weighted_ror = self.TimeWeightedReturn(start_date, end_date)
 
 
 
