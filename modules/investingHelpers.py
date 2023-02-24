@@ -15,13 +15,14 @@ import yfinance as yf
 yf.pdr_override()
 
 
-
+## -------------------- NOT USED -------------------- ##
 def HoldingPeriodReturn(start_value: float, end_value: float) -> float:
     ''' Calculate percentage investment return given two values '''
     if start_value == 0:
         return 0
     else:
         return (end_value / start_value) - 1
+
 
 
 def GetWeekdays(start_date, end_date):
@@ -49,13 +50,14 @@ def GetWeekdays(start_date, end_date):
 class Stock:
     ''' Class to represent a stock or fund '''
 
-    __slots__ = ('ticker', 'units', 'close_prices', 'name', 'dividends', 'currency')
+    __slots__ = ('ticker', 'units', 'close_prices', 'name', 'return_history', 'dividends', 'currency')
 
     def __init__(self, ticker:str, units = 0) -> None:
         self.ticker         = ticker
         self.units          = units
         self.close_prices   = None
         self.name           = None
+        self.return_history = None
         #self.dividends      = [] # Maybe this isn't good to store in the Stock class? Cuz it's like a growing list...
 
         if ticker[-3:] == '.TO':
@@ -82,9 +84,9 @@ class Stock:
         self.name = yf.Ticker(self.ticker).info['longName']
     
 
-    def PullData(self, start_date, end_date) -> None:
+    def PullData(self, start_date, end_date, closure_buffer = 7) -> None:
         ''' Pulls the adjusted close price data for this stock '''
-        start_date -=  dt.timedelta(days=7) # Pull extra days in case of market closure
+        start_date -=  dt.timedelta(days=closure_buffer) # Pull extra days in case of market closure
         #print('Pulling data for ' + self.ticker + ' between ' + str(start_date) + ' and ' + str(end_date))
         # Basically ignore this stock. Will set value to 0 so it doesn't matter what I pull
         if self.ticker == 'PHUNW':
@@ -122,6 +124,13 @@ class Stock:
             return 0
         else:
             return self.units * self.close_prices[date]
+    
+
+    def CalculateReturns(self) -> None:
+        ''' Calculates the percentage return history over a given time period '''
+        simple_returns = self.close_prices.pct_change().dropna()
+        percent_returns = (np.cumprod([(1 + rt) for rt in simple_returns]) - 1) * 100
+        self.return_history = np.concatenate((np.array([0]), percent_returns), axis=0)
 
 
 
@@ -200,12 +209,13 @@ class Portfolio:
         self.cash           = {'CAD': initial_cash_CAD,
                                 'USD': initial_cash_USD}
         
-        self.daily_deposit    = 0
-        self.deposit_history  = None
-        self.value_history    = None
-        self.dividend_history = None
-        self.return_history   = None
-        self.dates            = None
+        self.daily_deposit     = 0
+        self.deposit_history   = None
+        self.value_history     = None
+        self.dividend_history  = None
+        self.time_weighted_ror = None
+        #self.return_history    = None
+        self.dates             = None
 
         # Initialize any stocks in the portfolio.
         # These should be passed as a numpy array with
@@ -365,7 +375,7 @@ class Portfolio:
         self.value_history    = np.zeros(days_in_range)
         self.deposit_history  = np.zeros(days_in_range)
         self.dividend_history = np.zeros(days_in_range)
-        self.return_history   = np.zeros(days_in_range)
+        #self.return_history   = np.zeros(days_in_range)
 
         self.cumulative_deposits = None
 
@@ -394,22 +404,19 @@ class Portfolio:
             self.value_history[i]   = portfolio_value
             self.deposit_history[i] = self.daily_deposit
 
-            # Calculate daily return based on the last known portfolio value
-            if i == 0:
-                last_value_plus_deposits = 0
-            else:
-                last_value_plus_deposits = self.value_history[i-1] + self.daily_deposit
-            self.return_history[i]  = HoldingPeriodReturn(last_value_plus_deposits, portfolio_value)
+            ## Calculate daily return based on the last known portfolio value
+            #if i == 0:
+            #    last_value_plus_deposits = 0
+            #else:
+            #    last_value_plus_deposits = self.value_history[i-1] + self.daily_deposit
+            #self.return_history[i]  = HoldingPeriodReturn(last_value_plus_deposits, portfolio_value)
         
+        # After getting data for all the days in the time range, calculate a few
+        # more useful portfolio properties
         self.cumulative_deposits = np.cumsum(self.deposit_history)
 
-    
-    def TrackReturns(self, start_date, end_date) -> None:
-        # Maybe combine this with the function above? That way you know when to
-        # cut on holding periods. Or just keep track of a list of holding period
-        # change dates?
-        # Maybe relable trackvalue to just 'Track' ?
-        return
+        value_minus_deposits = self.value_history - self.cumulative_deposits
+        self.time_weighted_ror = 100 * value_minus_deposits / self.cumulative_deposits
 
 
 
