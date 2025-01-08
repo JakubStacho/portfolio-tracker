@@ -6,8 +6,10 @@ Last Updated: Jan 06, 2025\
 Total Portfolio Value:  $ 76,247\
 Time Weighted Return: 56.12%
 
+## Portfolio Value
 ![Portfolio Value](./output/portfolio-value.png)
 
+## Portfolio Returns
 ![Portfolio Returns](./output/percent-returns.png)
 
 ## Notes
