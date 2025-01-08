@@ -98,13 +98,15 @@ class Stock:
     def Buy(self, unit_number) -> None:
         ''' Adds held shares '''
         #print('Buying ' + str(unit_number) + ' units of ' + self.ticker)
+        if self.ticker == 'SCHD': unit_number *= 3 # 3x share number to account for stock split on Oct 10, 2024
         self.units += unit_number
     
 
     def Sell(self, unit_number) -> None:
         ''' Removes held shares '''
         #print('Selling ' + str(unit_number) + ' units of ' + self.ticker)
-        self.units += unit_number
+        if self.ticker == 'SCHD': unit_number *= 3 # 3x share number to account for stock split on Oct 10, 2024
+        self.units += unit_number # + here because the unit number comes with a '-' in the data column already
         # Should change the recording method and then update this to a -=. I temporarily set it to += now because selling is
         # in my dataset with negative units already.
     
@@ -118,6 +120,11 @@ class Stock:
     def Value(self, date=dt.datetime.now()):
         ''' Returns the value of this position at a given date '''
         #print('Calculating value of ' + self.ticker + ' on the date: ' + str(date))
+        if self.ticker == 'DWAC':
+            if date == dt.datetime(2021,10,21):
+                return self.units * 40
+            elif date == dt.datetime(2021,10,22):
+                return self.units * 90
         while date not in self.close_prices.keys():
             date -= dt.timedelta(days=1)
         if self.ticker == 'PHUNW':
@@ -346,6 +353,9 @@ class Portfolio:
 
     def CalculateValue(self, date=dt.datetime.now()):
         ''' Calculates the value of the portfolio (in CAD) on a given date at market close '''
+        while date not in self.exchange_rates.keys():
+            date -= dt.timedelta(days=1)
+            
         exchange_rate = self.exchange_rates[date]
         value = self.cash['CAD'] + (self.cash['USD'] * exchange_rate)
 
