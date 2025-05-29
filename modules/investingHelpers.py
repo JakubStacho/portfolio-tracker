@@ -117,7 +117,7 @@ class Stock:
     #    self.dividends.append([date, amount])
 
 
-    def Value(self, date=dt.datetime.now()):
+    def Value(self, date=dt.datetime.today()):
         ''' Returns the value of this position at a given date '''
         #print('Calculating value of ' + self.ticker + ' on the date: ' + str(date))
         if self.ticker == 'DWAC':
@@ -224,7 +224,7 @@ class Portfolio:
                 units = initial_tickers_and_units[i, 1]
                 self.AddStock(ticker, units)
         
-        self.exchange_rates = pdr.get_data_yahoo('USDCAD=X', dt.datetime(2020,1,1), dt.datetime.now(), progress=False).iloc[:, 4]
+        self.exchange_rates = pdr.get_data_yahoo('USDCAD=X', dt.datetime(2021,1,1), dt.datetime.today() - dt.timedelta(days=5), progress=False).iloc[:, 4] # used to be USDCAD=X
     
 
     # ------------------------------------------------------------------------
@@ -309,7 +309,7 @@ class Portfolio:
 
         stock = self.GetStock(transaction.ticker)
         if new_stock:
-            stock.PullData(transaction.date, dt.datetime.now())
+            stock.PullData(transaction.date, dt.datetime.today())
         self.cash[transaction.currency] -= transaction.amount
         stock.Buy(transaction.units)
 
@@ -351,7 +351,7 @@ class Portfolio:
     # ------------------------------------------------------------------------
     
 
-    def CalculateValue(self, date=dt.datetime.now()):
+    def CalculateValue(self, date=dt.datetime.today()):
         ''' Calculates the value of the portfolio (in CAD) on a given date at market close '''
         while date not in self.exchange_rates.keys():
             date -= dt.timedelta(days=1)
