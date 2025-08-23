@@ -1,73 +1,29 @@
-#!./env/bin/ python3
-
-'''
-File containing functions and objects for tracking investment returns
-'''
-
-# Import modules
-import datetime as dt
 import numpy as np
 import pandas as pd
-from pandas_datareader import data as pdr
+import datetime as dt
 import yfinance as yf
 
-# Need to run this for datareader to pull yahoo data correctly
-yf.pdr_override()
-
-
-## -------------------- NOT USED -------------------- ##
-def HoldingPeriodReturn(start_value: float, end_value: float) -> float:
-    ''' Calculate percentage investment return given two values '''
-    if start_value == 0:
-        return 0
-    else:
-        return (end_value / start_value) - 1
+from pandas.tseries.offsets import BDay
 
 
 
-def GetWeekdays(start_date, end_date):
-    ''' Returns an array of all the weekdays within the specified bounds inclusively '''
-    duration = (end_date - start_date).days
-
-    if start_date.weekday() > 4:
-        print('Warning: Start date specified is a weekend. The next weekday will be used as the start date.')
-    
-    weekday_list = []
-
-    for i in range(duration + 1):
-        next_day = start_date + dt.timedelta(days=i)
-        weekday = True if next_day.weekday() < 5 else False
-        if not weekday:
-            continue
-        weekday_list.append(next_day)
-    
-    weekday_list = np.array(weekday_list)
-    return weekday_list
+class Position:
+    '''
+    Class to represent a stock or fund in the portfolio
+    '''
 
 
-
-# --------------------------------------------------------------------------------------------------
-class Stock:
-    ''' Class to represent a stock or fund '''
-
-    __slots__ = ('ticker', 'units', 'close_prices', 'name', 'return_history', 'dividends', 'currency')
-
-    def __init__(self, ticker:str, units = 0) -> None:
+    def __init__(self, ticker, initial_shares) -> None:
         self.ticker         = ticker
-        self.units          = units
-        self.close_prices   = None
-        self.name           = None
-        self.return_history = None
-        #self.dividends      = [] # Maybe this isn't good to store in the Stock class? Cuz it's like a growing list...
+        self.shares         = initial_shares
+        # self.close_prices   = None
+        # self.name           = None
+        # self.return_history = None
 
-        if ticker[-3:] == '.TO':
-            self.currency   = 'CAD'
-        else:
-            self.currency   = 'USD'
-            # This one changed from canadian listed to US listed so I have to revert to CAD
-            # Actually, that's ok because the transaction is still in CAD and value in USD can be exchanged
-            #if self.ticker == 'HDIUF':
-            #    self.currency = 'CAD'
+        # pull info about the security
+        pulled_info   = yf.Ticker(self.ticker).info
+        self.name     = pulled_info['longName']
+        self.currency = pulled_info['currency']
     
 
     def __str__(self) -> str:
@@ -75,13 +31,7 @@ class Stock:
     
 
     def __repr__(self):
-        return repr(str(self.units) + ' units of ' + self.ticker)
-    
-
-    def PullName(self) -> None:
-        ''' Pulling the full company name takes a long time but we can add
-            the option to do that here because why not '''
-        self.name = yf.Ticker(self.ticker).info['longName']
+        return repr(str(self.shares) + ' shares of ' + self.ticker)
     
 
     def PullData(self, start_date, end_date, closure_buffer = 7) -> None:
@@ -99,14 +49,14 @@ class Stock:
         ''' Adds held shares '''
         #print('Buying ' + str(unit_number) + ' units of ' + self.ticker)
         if self.ticker == 'SCHD': unit_number *= 3 # 3x share number to account for stock split on Oct 10, 2024
-        self.units += unit_number
+        self.shares += unit_number
     
 
     def Sell(self, unit_number) -> None:
         ''' Removes held shares '''
         #print('Selling ' + str(unit_number) + ' units of ' + self.ticker)
         if self.ticker == 'SCHD': unit_number *= 3 # 3x share number to account for stock split on Oct 10, 2024
-        self.units += unit_number # + here because the unit number comes with a '-' in the data column already
+        self.shares += unit_number # + here because the unit number comes with a '-' in the data column already
         # Should change the recording method and then update this to a -=. I temporarily set it to += now because selling is
         # in my dataset with negative units already.
     
@@ -122,15 +72,15 @@ class Stock:
         #print('Calculating value of ' + self.ticker + ' on the date: ' + str(date))
         if self.ticker == 'DWAC':
             if date == dt.datetime(2021,10,21):
-                return self.units * 40
+                return self.shares * 40
             elif date == dt.datetime(2021,10,22):
-                return self.units * 90
+                return self.shares * 90
         while date not in self.close_prices.keys():
             date -= dt.timedelta(days=1)
         if self.ticker == 'PHUNW':
             return 0
         else:
-            return self.units * self.close_prices[date]
+            return self.shares * self.close_prices[date]
     
 
     def CalculateReturns(self) -> None:
@@ -142,10 +92,10 @@ class Stock:
 
 
 # --------------------------------------------------------------------------------------------------
-class Transaction:
-    ''' Class for storing data regarding a transaction '''
-
-    __slots__ = ('date', 'ticker', 'type', 'units', 'pps', 'currency', 'amount')
+class Transaction: #### DO WE NEED THIS? MAYBE IT'S GOOD FOR DEBUGGING TO HAVE THE REPR BUT WE CAN JUST PRINT THAT
+    '''
+    Class for storing data regarding a transaction
+    '''
 
     def __init__(self, date, ticker, transaction_type, units, price_per_share, total_currency, total_amount) -> None:
         self.date       = date
@@ -195,6 +145,29 @@ class TransactionReader:
         
         return transactions
 
+
+
+# class Transactions:
+#     '''
+#     Class that stores and parses transaction history data
+#     '''
+#     def __init__(self, transaction_file):
+#         transaction_history         = pd.read_csv(transaction_file, skiprows=1)[['date', 'security', 'action', 'quantity', 'currency', 'total']]
+#         transaction_history['date'] = pd.to_datetime(transaction_history['date'], format='%m/%d/%Y')
+
+#         # shift any date that is not a business day to the next business day
+#         transaction_history['date'] = transaction_history['date'] + 0 * BDay()
+
+#         self.transactions_df = transaction_history
+    
+
+#     def transactions_on_date(self, date):
+#         '''
+#         Returns an itterable of the transactions from the
+#         transaction history on a given date
+#         '''
+#         transactions_on_date = self.transactions_df[self.transactions_df['date'] == date]
+#         return transactions_on_date.iterrows()
 
 
 # --------------------------------------------------------------------------------------------------
@@ -343,7 +316,7 @@ class Portfolio:
 
     def Rebate(self, transaction, i) -> None:
         ''' Add cash to portfolio from a rebate '''
-        self.cash[transaction.currency] += transaction.amount
+        self.cash[transaction.currency] += transaction.amount * transaction.units
 
 
     # ------------------------------------------------------------------------
